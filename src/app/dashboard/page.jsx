@@ -1,46 +1,63 @@
-"use client";
-
 import Link from "next/link";
 
-export default function DashboardPage() {
+export default function Dashboard() {
   return (
-    <div className="min-h-screen p-8">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center px-4">
+      
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center space-y-6">
+        
+        {/* Welcome */}
+        <h2 className="text-4xl font-extrabold text-gray-800">
+          Welcome to SkillSwap 🤝
+        </h2>
+        <p className="text-gray-500">
+          Exchange skills. Learn together. Grow faster.
+        </p>
 
-      <p className="mb-8 text-gray-600">
-        Welcome to Skill Swap. Choose what you want to do.
-      </p>
+        {/* Action Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+          
+          <Link
+            href="/explore"
+            className="bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition"
+          >
+            🔍 Explore Skills
+          </Link>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link
-          href="/explore"
-          className="border rounded-lg p-6 hover:bg-gray-100 transition"
-        >
-          <h2 className="text-xl font-semibold">Explore Skills</h2>
-          <p className="text-sm text-gray-500 mt-2">
-            Browse skills shared by others
-          </p>
-        </Link>
+          <Link
+            href="/my-skills"
+            className="bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition"
+          >
+            📋 My Skills
+          </Link>
 
-        <Link
-          href="/add-skill"
-          className="border rounded-lg p-6 hover:bg-gray-100 transition"
-        >
-          <h2 className="text-xl font-semibold">Add Skill</h2>
-          <p className="text-sm text-gray-500 mt-2">
-            Share your skill with others
-          </p>
-        </Link>
+          <Link
+            href="/add-skill"
+            className="bg-pink-600 text-white py-3 rounded-xl font-semibold hover:bg-pink-700 transition"
+          >
+            ➕ Add Skill
+          </Link>
 
-        <Link
-          href="/my-skills"
-          className="border rounded-lg p-6 hover:bg-gray-100 transition"
-        >
-          <h2 className="text-xl font-semibold">My Skills</h2>
-          <p className="text-sm text-gray-500 mt-2">
-            View skills you have added
-          </p>
-        </Link>
+          <Link
+            href="/swap"
+            className="border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition"
+          >
+            🔁 Swap Skill
+          </Link>
+           <Link
+            href="/my-swaps"
+            className=" bg-pink-500 w-full border-2 border-blue-600 text-white-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition"
+          >
+            🔁 My Swaps
+          </Link>
+
+
+        </div>
+
+        {/* Footer note */}
+        <p className="text-xs text-gray-400 pt-4">
+          Built for students • Powered by collaboration 🚀
+        </p>
       </div>
     </div>
   );

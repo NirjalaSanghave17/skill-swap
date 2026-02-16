@@ -26,36 +26,30 @@ export default function MySwaps() {
 
     const userId = session.user.id;
 
-    // 1️⃣ Get MY skills
-    const { data: mySkills } = await supabase
-      .from("skills")
-      .select("id")
-      .eq("user_id", userId);
-
-    if (!mySkills || mySkills.length === 0) {
-      setLoading(false);
-      return;
-    }
-
-    const skillIds = mySkills.map((s) => s.id);
-
-    // 2️⃣ Get swaps FOR my skills
+    // 🔥 Directly fetch swaps where logged user owns the skill
     const { data, error } = await supabase
       .from("swaps")
       .select(`
         id,
         status,
         created_at,
-        skills (
+        skills!inner (
+          id,
           skill_name,
           skill_level,
-          type
+          type,
+          user_id
         )
       `)
-      .in("skill_id", skillIds)
+      .eq("skills.user_id", userId)
       .order("created_at", { ascending: false });
 
-    if (!error) setSwaps(data || []);
+    if (error) {
+      console.log("Fetch error:", error);
+    } else {
+      setSwaps(data || []);
+    }
+
     setLoading(false);
   };
 
@@ -92,9 +86,9 @@ export default function MySwaps() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
 
-        <h2 className="text-3xl font-bold text-center mb-6">
-          Swap Requests
-        </h2>
+        <h2 className="text-3xl font-bold text-center mb-6 text-indigo-600">
+  Swap Requests
+</h2>
 
         {swaps.length === 0 && (
           <p className="text-center text-gray-500">
@@ -104,13 +98,12 @@ export default function MySwaps() {
 
         <div className="space-y-4">
           {swaps.map((swap) => (
-            <div
-              key={swap.id}
-              className="border rounded-xl p-4"
-            >
+            <div key={swap.id} className="border rounded-xl p-4">
+
               <p className="font-semibold">
                 {swap.skills.skill_name}
               </p>
+
               <p className="text-sm text-gray-600">
                 {swap.skills.skill_level} • {swap.skills.type}
               </p>
@@ -145,6 +138,7 @@ export default function MySwaps() {
                   </button>
                 </div>
               )}
+
             </div>
           ))}
         </div>

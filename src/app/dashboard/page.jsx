@@ -46,7 +46,7 @@ export default function Dashboard() {
           </Link>
            <Link
             href="/my-swaps"
-            className=" bg-pink-500 w-full border-2 border-blue-600 text-white-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition"
+            className=" bg-pink-500  border-2 border-blue-600 text-white-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition"
           >
             🔁 My Swaps
           </Link>

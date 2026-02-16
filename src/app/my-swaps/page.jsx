@@ -1,147 +1,147 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
 export default function MySwaps() {
   const router = useRouter();
-  const [requests, setRequests] = useState([]);
+  const [swaps, setSwaps] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState("");
+  const [updatingId, setUpdatingId] = useState(null);
 
   useEffect(() => {
-    const fetchRequests = async () => {
-      // 1️⃣ Get logged-in user
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData?.session?.user;
+    fetchMySwaps();
+  }, []);
 
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+  const fetchMySwaps = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      // 2️⃣ Get IDs of skills owned by logged-in user
-      const { data: mySkills, error: mySkillsError } = await supabase
-        .from("skills")
-        .select("id")
-        .eq("user_id", user.id);
+    if (!session) {
+      router.push("/login");
+      return;
+    }
 
-      if (mySkillsError) {
-        alert(mySkillsError.message);
-        setLoading(false);
-        return;
-      }
+    const userId = session.user.id;
 
-      const mySkillIds = mySkills?.map((s) => s.id) || [];
+    // 1️⃣ Get MY skills
+    const { data: mySkills } = await supabase
+      .from("skills")
+      .select("id")
+      .eq("user_id", userId);
 
-      if (mySkillIds.length === 0) {
-        setRequests([]);
-        setLoading(false);
-        return;
-      }
-
-      // 3️⃣ Fetch swap requests for these skills
-      const { data: swapData, error } = await supabase
-        .from("swaps")
-        .select(`
-          id,
-          skill_id,
-          requester_id,
-          status,
-          created_at,
-          fk_skill (
-            skill_name,
-            skill_level,
-            type,
-            user_id
-          ),
-          fk_requester (
-            email
-          )
-        `)
-        .in("skill_id", mySkillIds);
-
-      if (error) {
-        alert(error.message);
-      } else {
-        setRequests(swapData || []);
-      }
-
+    if (!mySkills || mySkills.length === 0) {
       setLoading(false);
-    };
+      return;
+    }
 
-    fetchRequests();
-  }, [router]);
+    const skillIds = mySkills.map((s) => s.id);
 
-  const handleDecision = async (swapId, decision) => {
-    setProcessing(swapId);
+    // 2️⃣ Get swaps FOR my skills
+    const { data, error } = await supabase
+      .from("swaps")
+      .select(`
+        id,
+        status,
+        created_at,
+        skills (
+          skill_name,
+          skill_level,
+          type
+        )
+      `)
+      .in("skill_id", skillIds)
+      .order("created_at", { ascending: false });
+
+    if (!error) setSwaps(data || []);
+    setLoading(false);
+  };
+
+  const updateStatus = async (swapId, status) => {
+    setUpdatingId(swapId);
 
     const { error } = await supabase
       .from("swaps")
-      .update({ status: decision })
+      .update({ status })
       .eq("id", swapId);
 
-    if (error) {
-      alert(error.message);
-    } else {
-      setRequests((prev) =>
-        prev.map((r) => (r.id === swapId ? { ...r, status: decision } : r))
+    if (!error) {
+      setSwaps((prev) =>
+        prev.map((s) =>
+          s.id === swapId ? { ...s, status } : s
+        )
       );
-      alert(`Swap ${decision}!`);
+    } else {
+      alert(error.message);
     }
 
-    setProcessing("");
+    setUpdatingId(null);
   };
 
-  if (loading)
-    return <p className="text-center mt-20 text-gray-100">Loading swap requests...</p>;
+  if (loading) {
+    return (
+      <p className="text-center mt-20 text-white">
+        Loading swap requests...
+      </p>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 space-y-6">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
 
-        {/* Page title */}
-        <h2 className="text-3xl font-extrabold text-gray-800 text-center">
-          Swap Requests 🔁
+        <h2 className="text-3xl font-bold text-center mb-6">
+          Swap Requests
         </h2>
 
-        {/* No requests */}
-        {requests.length === 0 && (
-          <p className="text-center text-gray-500">No swap requests yet</p>
+        {swaps.length === 0 && (
+          <p className="text-center text-gray-500">
+            No swap requests yet
+          </p>
         )}
 
-        {/* Swap requests list */}
-        <div className="space-y-3">
-          {requests.map((req) => (
+        <div className="space-y-4">
+          {swaps.map((swap) => (
             <div
-              key={req.id}
-              className="border p-3 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center"
+              key={swap.id}
+              className="border rounded-xl p-4"
             >
-              <div className="mb-2 sm:mb-0">
-                <p className="font-semibold text-gray-800">{req.fk_skill.skill_name}</p>
-                <p className="text-sm text-gray-600">{req.fk_skill.skill_level} • {req.fk_skill.type}</p>
-                <p className="text-sm text-gray-500">
-                  Requested by: {req.fk_requester?.email || "Unknown"}
-                </p>
-                <p className="text-sm font-semibold">Status: {req.status}</p>
-              </div>
+              <p className="font-semibold">
+                {swap.skills.skill_name}
+              </p>
+              <p className="text-sm text-gray-600">
+                {swap.skills.skill_level} • {swap.skills.type}
+              </p>
 
-              {req.status === "pending" && (
-                <div className="flex gap-2">
+              <p className="mt-2">
+                Status:{" "}
+                <span className="font-semibold capitalize">
+                  {swap.status}
+                </span>
+              </p>
+
+              {swap.status === "pending" && (
+                <div className="flex gap-3 mt-4">
                   <button
-                    onClick={() => handleDecision(req.id, "accepted")}
-                    disabled={processing === req.id}
-                    className="bg-green-600 text-white px-3 py-1 rounded-xl font-semibold hover:bg-green-700 transition"
+                    onClick={() =>
+                      updateStatus(swap.id, "accepted")
+                    }
+                    disabled={updatingId === swap.id}
+                    className="flex-1 bg-green-600 text-white py-2 rounded-xl hover:bg-green-700"
                   >
-                    {processing === req.id ? "..." : "Accept"}
+                    Accept
                   </button>
+
                   <button
-                    onClick={() => handleDecision(req.id, "rejected")}
-                    disabled={processing === req.id}
-                    className="bg-red-600 text-white px-3 py-1 rounded-xl font-semibold hover:bg-red-700 transition"
+                    onClick={() =>
+                      updateStatus(swap.id, "rejected")
+                    }
+                    disabled={updatingId === swap.id}
+                    className="flex-1 bg-red-600 text-white py-2 rounded-xl hover:bg-red-700"
                   >
-                    {processing === req.id ? "..." : "Reject"}
+                    Reject
                   </button>
                 </div>
               )}
@@ -149,13 +149,13 @@ export default function MySwaps() {
           ))}
         </div>
 
-        {/* Dashboard button */}
         <button
           onClick={() => router.push("/dashboard")}
-          className="w-full border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition"
+          className="w-full mt-6 border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl hover:bg-indigo-50"
         >
           🏠 Go to Dashboard
         </button>
+
       </div>
     </div>
   );

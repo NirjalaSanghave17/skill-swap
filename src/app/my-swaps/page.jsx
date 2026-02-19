@@ -15,6 +15,9 @@ export default function MySwaps() {
   }, []);
 
   const fetchMySwaps = async () => {
+    setLoading(true);
+
+    // ✅ Get logged-in user
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -26,26 +29,46 @@ export default function MySwaps() {
 
     const userId = session.user.id;
 
-    // 🔥 Directly fetch swaps where logged user owns the skill
+    // ✅ STEP 1: Get all skills owned by this user
+    const { data: mySkills, error: skillError } = await supabase
+      .from("skills")
+      .select("id")
+      .eq("user_id", userId);
+
+    if (skillError) {
+      console.error("Skill Fetch Error:", skillError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!mySkills || mySkills.length === 0) {
+      setSwaps([]);
+      setLoading(false);
+      return;
+    }
+
+    const skillIds = mySkills.map((skill) => skill.id);
+
+    // ✅ STEP 2: Fetch swaps for those skills
     const { data, error } = await supabase
       .from("swaps")
       .select(`
         id,
         status,
         created_at,
-        skills!inner (
-          id,
+        skill_id,
+        skills (
           skill_name,
           skill_level,
           type,
           user_id
         )
       `)
-      .eq("skills.user_id", userId)
+      .in("skill_id", skillIds)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.log("Fetch error:", error);
+      console.error("Supabase Fetch Error:", error.message);
     } else {
       setSwaps(data || []);
     }
@@ -61,14 +84,14 @@ export default function MySwaps() {
       .update({ status })
       .eq("id", swapId);
 
-    if (!error) {
+    if (error) {
+      alert("Update failed: " + error.message);
+    } else {
       setSwaps((prev) =>
         prev.map((s) =>
           s.id === swapId ? { ...s, status } : s
         )
       );
-    } else {
-      alert(error.message);
     }
 
     setUpdatingId(null);
@@ -76,80 +99,85 @@ export default function MySwaps() {
 
   if (loading) {
     return (
-      <p className="text-center mt-20 text-white">
-        Loading swap requests...
-      </p>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center">
+        <p className="text-white text-xl animate-pulse">
+          Loading swap requests...
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center px-4 py-10">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-
         <h2 className="text-3xl font-bold text-center mb-6 text-indigo-600">
-  Swap Requests
-</h2>
+          Incoming Requests
+        </h2>
 
-        {swaps.length === 0 && (
+        {swaps.length === 0 ? (
           <p className="text-center text-gray-500">
-            No swap requests yet
+            No swap requests yet.
           </p>
-        )}
+        ) : (
+          <div className="space-y-4">
+            {swaps.map((swap) => (
+              <div
+                key={swap.id}
+                className="border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-bold text-gray-800 text-lg">
+                      {swap.skills?.skill_name}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {swap.skills?.skill_level} • {swap.skills?.type}
+                    </p>
+                  </div>
 
-        <div className="space-y-4">
-          {swaps.map((swap) => (
-            <div key={swap.id} className="border rounded-xl p-4">
-
-              <p className="font-semibold">
-                {swap.skills.skill_name}
-              </p>
-
-              <p className="text-sm text-gray-600">
-                {swap.skills.skill_level} • {swap.skills.type}
-              </p>
-
-              <p className="mt-2">
-                Status:{" "}
-                <span className="font-semibold capitalize">
-                  {swap.status}
-                </span>
-              </p>
-
-              {swap.status === "pending" && (
-                <div className="flex gap-3 mt-4">
-                  <button
-                    onClick={() =>
-                      updateStatus(swap.id, "accepted")
-                    }
-                    disabled={updatingId === swap.id}
-                    className="flex-1 bg-green-600 text-white py-2 rounded-xl hover:bg-green-700"
+                  <span
+                    className={`px-2 py-1 rounded-md text-xs font-bold uppercase ${
+                      swap.status === "pending"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : swap.status === "accepted"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
                   >
-                    Accept
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      updateStatus(swap.id, "rejected")
-                    }
-                    disabled={updatingId === swap.id}
-                    className="flex-1 bg-red-600 text-white py-2 rounded-xl hover:bg-red-700"
-                  >
-                    Reject
-                  </button>
+                    {swap.status}
+                  </span>
                 </div>
-              )}
 
-            </div>
-          ))}
-        </div>
+                {swap.status === "pending" && (
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={() => updateStatus(swap.id, "accepted")}
+                      disabled={updatingId === swap.id}
+                      className="flex-1 bg-green-600 text-white py-2 rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50 transition"
+                    >
+                      {updatingId === swap.id ? "..." : "Accept"}
+                    </button>
+
+                    <button
+                      onClick={() => updateStatus(swap.id, "rejected")}
+                      disabled={updatingId === swap.id}
+                      className="flex-1 bg-red-600 text-white py-2 rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50 transition"
+                    >
+                      {updatingId === swap.id ? "..." : "Reject"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <button
           onClick={() => router.push("/dashboard")}
-          className="w-full mt-6 border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl hover:bg-indigo-50"
+          className="w-full mt-8 border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-50 transition"
         >
           🏠 Go to Dashboard
         </button>
-
       </div>
     </div>
   );

@@ -1,6 +1,26 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data?.session;
+
+      // ✅ If already logged in → go to dashboard
+      if (session) {
+        router.push("/dashboard");
+      }
+    };
+
+    checkSession();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center px-6">
@@ -42,22 +62,20 @@ export default function Home() {
 
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-  
-  {/* Get Started → Register */}
-  <Link href="/register">
-    <button className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition">
-      Get Started
-    </button>
-  </Link>
 
-  {/* Explore Skills → Explore Page */}
-  <Link href="/explore">
-    <button className="border border-indigo-600 text-indigo-600 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition">
-      Explore Skills
-    </button>
-  </Link>
+          <Link href="/register">
+            <button className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition">
+              Get Started
+            </button>
+          </Link>
 
-</div>
+          <Link href="/explore">
+            <button className="border border-indigo-600 text-indigo-600 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition">
+              Explore Skills
+            </button>
+          </Link>
+
+        </div>
 
         {/* Footer text */}
         <p className="text-xs text-gray-400 mt-6">

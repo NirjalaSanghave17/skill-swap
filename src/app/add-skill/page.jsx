@@ -15,30 +15,49 @@ export default function AddSkill() {
     e.preventDefault();
     setLoading(true);
 
-    const { data } = await supabase.auth.getSession();
-    const user = data.session?.user;
+    // ✅ Get session properly
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-    if (!user) {
+    if (sessionError || !session) {
       router.push("/login");
       return;
     }
 
-    await supabase.from("skills").insert([
+    const userId = session.user.id;
+
+    // ✅ Insert skill with error handling
+    const { error } = await supabase.from("skills").insert([
       {
-        skill_name: skillName,
+        skill_name: skillName.trim(),
         skill_level: skillLevel,
         type,
-        user_id: user.id,
+        user_id: userId,
       },
     ]);
 
+    if (error) {
+      alert("Error adding skill: " + error.message);
+      setLoading(false);
+      return;
+    }
+
+    // ✅ Reset form
+    setSkillName("");
+    setSkillLevel("Beginner");
+    setType("teach");
+
     setLoading(false);
+
+    // ✅ Redirect after success
+    router.push("/dashboard");
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center space-y-6">
-
         <h2 className="text-3xl font-extrabold text-gray-800">
           Add Your Skill
         </h2>
@@ -75,13 +94,12 @@ export default function AddSkill() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition"
+            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition"
           >
             {loading ? "Adding..." : "Add Skill"}
           </button>
         </form>
 
-        {/* Dashboard Button */}
         <button
           onClick={() => router.push("/dashboard")}
           className="w-full border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition"

@@ -16,21 +16,41 @@ export default function Register() {
     const email = e.target.email.value;
     const password = e.target.password.value;
 
+    // 1️⃣ Create Auth User
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
 
-    if (error) return alert(error.message);
+    if (error) {
+      alert(error.message);
+      return;
+    }
 
-    await supabase.from("profiles").insert({
-      id: data.user.id,
-      name,
-      college,
-      level,
-      mode,
-    });
+    // 🔥 Important: check user exists
+    if (!data?.user) {
+      alert("User not created. Please verify email if required.");
+      return;
+    }
 
+    // 2️⃣ Insert into profiles table
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .insert({
+        id: data.user.id,
+        name,
+        college,
+        level,
+        mode,
+        email,
+      });
+
+    if (profileError) {
+      alert(profileError.message);
+      return;
+    }
+
+    alert("Registration successful! Please login.");
     router.push("/login");
   }
 
@@ -59,7 +79,7 @@ export default function Register() {
               required
               className="w-full mt-1 px-4 py-3 rounded-xl
                          bg-gray-50 border border-gray-300
-                         text-gray-900 placeholder-gray-400
+                         text-gray-900
                          focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -75,7 +95,7 @@ export default function Register() {
               required
               className="w-full mt-1 px-4 py-3 rounded-xl
                          bg-gray-50 border border-gray-300
-                         text-gray-900 placeholder-gray-400
+                         text-gray-900
                          focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -128,7 +148,7 @@ export default function Register() {
               required
               className="w-full mt-1 px-4 py-3 rounded-xl
                          bg-gray-50 border border-gray-300
-                         text-gray-900 placeholder-gray-400
+                         text-gray-900
                          focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -144,7 +164,7 @@ export default function Register() {
               required
               className="w-full mt-1 px-4 py-3 rounded-xl
                          bg-gray-50 border border-gray-300
-                         text-gray-900 placeholder-gray-400
+                         text-gray-900
                          focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
